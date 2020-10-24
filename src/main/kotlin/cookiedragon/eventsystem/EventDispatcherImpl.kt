@@ -7,6 +7,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.ArrayList
 
 /**
  * @author cookiedragon234 15/Feb/2020
@@ -17,20 +18,30 @@ internal object EventDispatcherImpl: EventDispatcher {
 	
 	override fun <T : Any> dispatch(event: T): T {
 		var clazz: Class<*> = event.javaClass
-		while (true) {
-			subscriptions[clazz]?.let { methods ->
+		val classList = arrayListOf(clazz)
+		while(clazz != Any::class.java) {
+			clazz = clazz.superclass
+			classList.add(clazz)
+		}
+
+		val queue = PriorityQueue<SubscribingMethod<*>>(compareByDescending { it.priority })
+
+		classList.forEach {
+			subscriptions[it]?.let { methods ->
 				for (method in methods) {
-					println(method.method.name)
-					if (method.active) {
-						method.invoke(event)
-					}
+					queue.add(method)
 				}
 			}
-			if (clazz == Any::class.java)
-				break
-			clazz = clazz.superclass
-
 		}
+
+		while(queue.isNotEmpty()) {
+			val method = queue.remove()
+			println(method.method.name + " Prio: " + method.priority)
+			if (method.active) {
+				method.invoke(event)
+			}
+		}
+
 		return event
 	}
 	
