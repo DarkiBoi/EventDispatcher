@@ -18,8 +18,7 @@ internal object EventDispatcherImpl: EventDispatcher {
 		var clazz: Class<*> = event.javaClass
 		while (true) {
 			subscriptions[clazz]?.let { methods ->
-				val sortedMethods = methods.sortedWith(compareBy { it.priority })
-				for (method in sortedMethods) {
+				for (method in methods) {
 					if (method.active) {
 						method.invoke(event)
 					}
@@ -75,6 +74,7 @@ internal object EventDispatcherImpl: EventDispatcher {
 					hashSetOf()
 				}
 			).add(SubscribingMethod(clazz, instance, method.isStatic(), methodHandle, annotation.priority))
+			subscriptions[eventType] = subscriptions[eventType]?.sortedWith(compareBy { it.priority }) as MutableSet<SubscribingMethod<*>>
 		}
 	}
 	
