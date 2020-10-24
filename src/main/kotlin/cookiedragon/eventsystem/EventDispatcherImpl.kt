@@ -18,7 +18,8 @@ internal object EventDispatcherImpl: EventDispatcher {
 		var clazz: Class<*> = event.javaClass
 		while (true) {
 			subscriptions[clazz]?.let { methods ->
-				for (method in methods) {
+				val sortedMethods = methods.sortedWith(compareBy { it.priority })
+				for (method in sortedMethods) {
 					if (method.active) {
 						method.invoke(event)
 					}
@@ -49,6 +50,8 @@ internal object EventDispatcherImpl: EventDispatcher {
 			// Needs Subscriber annotation
 			if (!method.isAnnotationPresent(Subscriber::class.java))
 				continue
+
+			val annotation = method.getAnnotation(Subscriber::class.java)
 			
 			if (method.returnType != Void.TYPE) {
 				IllegalArgumentException("Subscriber $clazz.${method.name} cannot return type")
@@ -71,7 +74,7 @@ internal object EventDispatcherImpl: EventDispatcher {
 				eventType, {
 					hashSetOf()
 				}
-			).add(SubscribingMethod(clazz, instance, method.isStatic(), methodHandle))
+			).add(SubscribingMethod(clazz, instance, method.isStatic(), methodHandle, annotation.priority))
 		}
 	}
 	
@@ -106,7 +109,7 @@ internal object EventDispatcherImpl: EventDispatcher {
 }
 
 
-data class SubscribingMethod<T:Any>(val clazz: Class<*>, val instance: T?, val static: Boolean, val method: MethodHandle, var active: Boolean = false) {
+data class SubscribingMethod<T:Any>(val clazz: Class<*>, val instance: T?, val static: Boolean, val method: MethodHandle, val priority: Int, var active: Boolean = false) {
 	@Throws(Throwable::class)
 	fun <E:Any> invoke(event: E) {
 		if(static){
