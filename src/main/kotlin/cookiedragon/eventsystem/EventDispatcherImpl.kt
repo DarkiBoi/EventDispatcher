@@ -76,7 +76,7 @@ internal object EventDispatcherImpl: EventDispatcher {
 					hashSetOf()
 				}
 			).add(SubscribingMethod(clazz, instance, method.isStatic(), method, methodHandle, annotation.priority))
-			subscriptions[eventType] = subscriptions[eventType]?.sortedWith(compareBy { it.priority })?.asReversed()?.toMutableSet()!!
+			subscriptions[eventType] = subscriptions[eventType]?.sortedWith(compareByDescending { it.priority })?.toMutableSet()!!
 		}
 	}
 	
