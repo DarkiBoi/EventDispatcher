@@ -15,27 +15,27 @@ import kotlin.collections.ArrayList
 internal object EventDispatcherImpl: EventDispatcher {
 	private val lookup = MethodHandles.lookup()
 	private val subscriptions: MutableMap<Class<*>, MutableSet<SubscribingMethod<*>>> = ConcurrentHashMap()
-	
+
+	val invokeQueue = PriorityQueue<SubscribingMethod<*>>(compareByDescending { it.priority })
+
 	override fun <T : Any> dispatch(event: T): T {
+		invokeQueue.clear()
 		var clazz: Class<*> = event.javaClass
 		val classes = mutableSetOf(clazz)
 		while(clazz != Any::class.java) {
 			clazz = clazz.superclass
 			classes.add(clazz)
 		}
-
-		val queue = PriorityQueue<SubscribingMethod<*>>(compareByDescending { it.priority })
-
 		classes.forEach {
 			subscriptions[it]?.let { methods ->
 				for (method in methods) {
-					if(method.active) queue.add(method)
+					if(method.active) invokeQueue.add(method)
 				}
 			}
 		}
 
-		while(queue.isNotEmpty()) {
-			val method = queue.remove()
+		while(invokeQueue.isNotEmpty()) {
+			val method = invokeQueue.remove()
 			println(method.method.name + " Prio: " + method.priority)
 			method.invoke(event)
 		}
@@ -49,16 +49,17 @@ internal object EventDispatcherImpl: EventDispatcher {
 	
 	private fun register(clazz: Class<*>, instance: Any?) {
 		for (method in clazz.declaredMethods) {
+
+			// Needs Subscriber annotation
+			if (!method.isAnnotationPresent(Subscriber::class.java))
+				continue
+
 			// If we are registering a static class then only allow static methods to be indexed
 			if (instance == null && !method.isStatic())
 				continue
 			
 			// If we are registering an initialised class then skip static methods
 			if (instance != null && method.isStatic())
-				continue
-			
-			// Needs Subscriber annotation
-			if (!method.isAnnotationPresent(Subscriber::class.java))
 				continue
 
 			val annotation = method.getAnnotation(Subscriber::class.java)
