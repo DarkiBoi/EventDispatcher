@@ -35,7 +35,6 @@ internal object EventDispatcherImpl: EventDispatcher {
 
 		while(invokeQueue.isNotEmpty()) {
 			val method = invokeQueue.remove()
-			println(method.method.name + " Prio: " + method.priority)
 			method.invoke(event)
 		}
 
