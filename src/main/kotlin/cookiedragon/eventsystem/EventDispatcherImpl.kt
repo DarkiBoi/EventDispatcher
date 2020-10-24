@@ -18,15 +18,15 @@ internal object EventDispatcherImpl: EventDispatcher {
 	
 	override fun <T : Any> dispatch(event: T): T {
 		var clazz: Class<*> = event.javaClass
-		val classList = mutableSetOf(clazz)
+		val classes = mutableSetOf(clazz)
 		while(clazz != Any::class.java) {
 			clazz = clazz.superclass
-			classList.add(clazz)
+			classes.add(clazz)
 		}
 
 		val queue = PriorityQueue<SubscribingMethod<*>>(compareByDescending { it.priority })
 
-		classList.forEach {
+		classes.forEach {
 			subscriptions[it]?.let { methods ->
 				for (method in methods) {
 					if(method.active) queue.add(method)
