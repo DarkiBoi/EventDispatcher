@@ -5,6 +5,7 @@ import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -19,6 +20,7 @@ internal object EventDispatcherImpl: EventDispatcher {
 		while (true) {
 			subscriptions[clazz]?.let { methods ->
 				for (method in methods) {
+					println(method.method.name)
 					if (method.active) {
 						method.invoke(event)
 					}
@@ -73,8 +75,8 @@ internal object EventDispatcherImpl: EventDispatcher {
 				eventType, {
 					hashSetOf()
 				}
-			).add(SubscribingMethod(clazz, instance, method.isStatic(), methodHandle, annotation.priority))
-			subscriptions[eventType] = subscriptions[eventType]?.sortedWith(compareBy { it.priority }) as MutableSet<SubscribingMethod<*>>
+			).add(SubscribingMethod(clazz, instance, method.isStatic(), method, methodHandle, annotation.priority))
+			subscriptions[eventType] = subscriptions[eventType]?.sortedWith(compareBy { it.priority })?.toMutableSet()!!
 		}
 	}
 	
@@ -109,13 +111,13 @@ internal object EventDispatcherImpl: EventDispatcher {
 }
 
 
-data class SubscribingMethod<T:Any>(val clazz: Class<*>, val instance: T?, val static: Boolean, val method: MethodHandle, val priority: Int, var active: Boolean = false) {
+data class SubscribingMethod<T:Any>(val clazz: Class<*>, val instance: T?, val static: Boolean, val method: Method, val handle: MethodHandle, val priority: Int, var active: Boolean = false) {
 	@Throws(Throwable::class)
 	fun <E:Any> invoke(event: E) {
 		if(static){
-			method.invoke(event)
+			handle.invoke(event)
 		} else {
-			method.invoke(instance,event)
+			handle.invoke(instance,event)
 		}
 
 	}
