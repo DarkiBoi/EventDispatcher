@@ -1,0 +1,16 @@
+version: 2
+updates:
+
+- package-ecosystem: "gradle"
+  directory: "/"
+  schedule:
+    interval: "daily"
+    time: "12:00"
+    timezone: "Europe/Berlin"
+  assignees:
+    - "DarkiBoi"
+  reviewers:
+    - "DarkiBoi"
+  commit-message:
+    prefix: "gradle"
+    include: "scope"
