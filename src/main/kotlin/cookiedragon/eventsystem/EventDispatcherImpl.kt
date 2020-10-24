@@ -29,7 +29,7 @@ internal object EventDispatcherImpl: EventDispatcher {
 		classList.forEach {
 			subscriptions[it]?.let { methods ->
 				for (method in methods) {
-					queue.add(method)
+					if(method.active) queue.add(method)
 				}
 			}
 		}
@@ -37,9 +37,7 @@ internal object EventDispatcherImpl: EventDispatcher {
 		while(queue.isNotEmpty()) {
 			val method = queue.remove()
 			println(method.method.name + " Prio: " + method.priority)
-			if (method.active) {
-				method.invoke(event)
-			}
+			method.invoke(event)
 		}
 
 		return event
