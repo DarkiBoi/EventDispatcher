@@ -16,9 +16,8 @@ internal object EventDispatcherImpl: EventDispatcher {
 	private val lookup = MethodHandles.lookup()
 	private val subscriptions: MutableMap<Class<*>, MutableSet<SubscribingMethod<*>>> = ConcurrentHashMap()
 
-	private val invokeQueue = PriorityQueue<SubscribingMethod<*>>(compareByDescending { it.priority })
-
 	override fun <T : Any> dispatch(event: T): T {
+		val invokeQueue = PriorityQueue<SubscribingMethod<*>>(compareByDescending { it.priority })
 		var clazz: Class<*> = event.javaClass
 		val classes = mutableSetOf(clazz)
 		while(clazz != Any::class.java) {
