@@ -5,7 +5,9 @@ import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.ArrayList
 
 /**
  * @author cookiedragon234 15/Feb/2020
@@ -13,22 +15,29 @@ import java.util.concurrent.ConcurrentHashMap
 internal object EventDispatcherImpl: EventDispatcher {
 	private val lookup = MethodHandles.lookup()
 	private val subscriptions: MutableMap<Class<*>, MutableSet<SubscribingMethod<*>>> = ConcurrentHashMap()
-	
+
+	private val invokeQueue = PriorityQueue<SubscribingMethod<*>>(compareByDescending { it.priority })
+
 	override fun <T : Any> dispatch(event: T): T {
 		var clazz: Class<*> = event.javaClass
-		while (true) {
-			subscriptions[clazz]?.let { methods ->
+		val classes = mutableSetOf(clazz)
+		while(clazz != Any::class.java) {
+			clazz = clazz.superclass
+			classes.add(clazz)
+		}
+		classes.forEach {
+			subscriptions[it]?.let { methods ->
 				for (method in methods) {
-					if (method.active) {
-						method.invoke(event)
-					}
+					if(method.active) invokeQueue.add(method)
 				}
 			}
-			if (clazz == Any::class.java)
-				break
-			clazz = clazz.superclass
-
 		}
+
+		while(invokeQueue.isNotEmpty()) {
+			val method = invokeQueue.remove()
+			method.invoke(event)
+		}
+
 		return event
 	}
 	
@@ -38,6 +47,11 @@ internal object EventDispatcherImpl: EventDispatcher {
 	
 	private fun register(clazz: Class<*>, instance: Any?) {
 		for (method in clazz.declaredMethods) {
+
+			// Needs Subscriber annotation
+			if (!method.isAnnotationPresent(Subscriber::class.java))
+				continue
+
 			// If we are registering a static class then only allow static methods to be indexed
 			if (instance == null && !method.isStatic())
 				continue
@@ -45,10 +59,8 @@ internal object EventDispatcherImpl: EventDispatcher {
 			// If we are registering an initialised class then skip static methods
 			if (instance != null && method.isStatic())
 				continue
-			
-			// Needs Subscriber annotation
-			if (!method.isAnnotationPresent(Subscriber::class.java))
-				continue
+
+			val annotation = method.getAnnotation(Subscriber::class.java)
 			
 			if (method.returnType != Void.TYPE) {
 				IllegalArgumentException("Subscriber $clazz.${method.name} cannot return type")
@@ -71,7 +83,8 @@ internal object EventDispatcherImpl: EventDispatcher {
 				eventType, {
 					hashSetOf()
 				}
-			).add(SubscribingMethod(clazz, instance, method.isStatic(), methodHandle))
+			).add(SubscribingMethod(clazz, instance, method.isStatic(), method, methodHandle, annotation.priority))
+			subscriptions[eventType] = subscriptions[eventType]?.sortedWith(compareByDescending { it.priority })?.toMutableSet()!!
 		}
 	}
 	
@@ -106,13 +119,13 @@ internal object EventDispatcherImpl: EventDispatcher {
 }
 
 
-data class SubscribingMethod<T:Any>(val clazz: Class<*>, val instance: T?, val static: Boolean, val method: MethodHandle, var active: Boolean = false) {
+data class SubscribingMethod<T:Any>(val clazz: Class<*>, val instance: T?, val static: Boolean, val method: Method, val handle: MethodHandle, val priority: Int, var active: Boolean = false) {
 	@Throws(Throwable::class)
 	fun <E:Any> invoke(event: E) {
 		if(static){
-			method.invoke(event)
+			handle.invoke(event)
 		} else {
-			method.invoke(instance,event)
+			handle.invoke(instance,event)
 		}
 
 	}
