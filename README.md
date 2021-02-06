@@ -11,7 +11,7 @@ repositories {
 	}
 }
 dependencies {
-	compile 'com.github.DarkiBoi:EventDispatcher:master-SNAPSHOT'
+	compile 'com.github.DarkiBoi:EventDispatcher:$tag'
 }
 ```
 
