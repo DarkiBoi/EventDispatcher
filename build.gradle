@@ -1,20 +1,22 @@
 buildscript {
-	ext.kotlin_version = '1.3.72'
+    ext.kotlin_version = '1.3.72'
     repositories {
         mavenCentral()
     }
 
     dependencies {
-		classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.hibernate.build.gradle:gradle-maven-publish-auth:2.0.1"
     }
 }
 
 apply plugin: 'kotlin'
 apply plugin: 'maven-publish'
+apply plugin: 'maven-publish-auth'
 
 group 'cookiedragon.eventsystem'
 archivesBaseName = 'EventSystem'
-version = ['git', 'rev-list', '--count', 'master'].execute().text.trim()
+version = ['git', 'describe', '--tags', '--abbrev=0'].execute().text.trim()
 
 repositories {
     mavenCentral()
@@ -24,24 +26,20 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
 }
 
-compileKotlin{
+compileKotlin {
     kotlinOptions.freeCompilerArgs += '-Xpolymorphic-signature'
 }
 
 publishing {
     repositories {
         maven {
-            name = "Github"
-            url = uri("https://maven.pkg.github.com/cookiedragon234/EventDispatcher")
-            credentials {
-                username = "cookiedragon234"
-                password = System.getProperty("token")
-            }
+            name = "konas"
+            url = "https://maven.konasclient.com/releases"
         }
     }
     publications {
         gpr(MavenPublication) {
-			from(components["java"])
+            from(components["java"])
         }
     }
 }
