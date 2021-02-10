@@ -11,7 +11,7 @@ repositories {
 	}
 }
 dependencies {
-	compile 'com.github.DarkiBoi:EventDispatcher:$tag'
+	compile 'cookiedragon.eventsystem:EventDispatcher:$tag'
 }
 ```
 
