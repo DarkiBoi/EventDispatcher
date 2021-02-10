@@ -7,7 +7,7 @@ build.gradle:
 ```Groovy
 repositories {
 	maven {
-		url 'https://maven.konasclient.com/releases '
+		url 'https://maven.konasclient.com/releases'
 	}
 }
 dependencies {
